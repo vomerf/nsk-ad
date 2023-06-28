@@ -1,7 +1,7 @@
 from typing import Annotated
 
-from fastapi import APIRouter, Depends, HTTPException
-from fastapi.encoders import jsonable_encoder
+from fastapi import APIRouter, Depends, HTTPException, Path
+
 from sqlalchemy import select
 from sqlalchemy.exc import DBAPIError
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -14,6 +14,7 @@ from app.schemas.ad import AdCreate, AdDB, AdUpdate
 from app.util.filter import filter_for_ad, parametr_filter_for_ad
 from app.util.pagination import parameters_for_pagination
 from app.util.sort import sort_query
+from fastapi.encoders import jsonable_encoder
 
 router = APIRouter(tags=['Announcement'])
 
@@ -26,7 +27,7 @@ async def create_ad(
     ad: AdCreate,
     session: AsyncSession = Depends(get_async_session),
     user: User = Depends(current_user)
-):
+) -> Announcement:
     obj_in_data = ad.dict()
     if user is not None:
         obj_in_data['user_id'] = user.id
@@ -47,7 +48,7 @@ async def list_ad(
     filter: Annotated[dict, Depends(parametr_filter_for_ad)],
     session: AsyncSession = Depends(get_async_session),
     sort: str = None,
-):
+) -> list[Announcement]:
     query = (
         select(Announcement).
         offset(pagination['skip']).
@@ -67,24 +68,29 @@ async def list_ad(
     return query
 
 
-@router.get('/detail-ad/{ad_id}',  dependencies=[Depends(current_user)])
+@router.get('/detail-ad/{ad_id}', response_model=AdDB, dependencies=[Depends(current_user)])
 async def detail_ad(
-    ad_id: int,
+    ad_id: int = Path(gte=1),
     session: AsyncSession = Depends(get_async_session),
-):
+) -> Announcement:
     ad = await session.execute(
         select(Announcement).where(Announcement.id == ad_id)
     )
     ad = ad.scalars().first()
+    if ad is None:
+        raise HTTPException(
+            status_code=404,
+            detail='Такого объявления не существует'
+        )
     return ad
 
 
-@router.delete('/delete-ad/{ad_id}')
+@router.delete('/delete-ad/{ad_id}', response_model=AdDB)
 async def delete_ad(
-    ad_id: int,
+    ad_id: int = Path(gte=1),
     session: AsyncSession = Depends(get_async_session),
     user: User = Depends(current_user)
-):
+) -> Announcement:
     ad = await session.execute(
         select(Announcement).
         where(Announcement.id == ad_id, Announcement.user_id == user.id)
@@ -103,13 +109,14 @@ async def delete_ad(
 
 @router.put(
     '/announcement/{announcement_id}/change-category/',
-    dependencies=[Depends(current_user)]
+    dependencies=[Depends(current_user)],
+    response_model=AdDB
     )
 async def change_category(
     obj_in: AdUpdate,
     announcement_id: int,
     session: AsyncSession = Depends(get_async_session),
-):
+) -> Announcement:
     '''Перемещение объявления из одной группы в другую'''
     ad = await session.execute(
         select(Announcement).where(Announcement.id == announcement_id)

@@ -1,2 +1,7 @@
-async def parameters_for_pagination(skip: int = 0, limit: int = 10):
+from fastapi import Query
+
+
+async def parameters_for_pagination(
+    skip: int = Query(0, gt=-1), limit: int = Query(10, gt=-1)
+):
     return {"skip": skip, "limit": limit}

@@ -9,10 +9,9 @@ from app.core.user import current_admin, current_user
 from app.models.announcement import Announcement, Complaint
 from app.models.user import User
 from app.schemas.complaint import ComplaintCreate, ComplaintDB
-from app.util.sort import sort_query
+from app.util.filter import filter_for_complaint, parametr_filter_for_complaint
 from app.util.pagination import parameters_for_pagination
-from app.util.filter import parametr_filter_for_complaint, filter_for_complaint
-
+from app.util.sort import sort_query
 
 router = APIRouter(tags=['Complaint'])
 
@@ -39,7 +38,8 @@ async def create_complaint(
 
 @router.get(
     '/announcement/{announcement_id}/list-complaint',
-    response_model=list[ComplaintDB]
+    response_model=list[ComplaintDB],
+    dependencies=[Depends(current_admin)]
 )
 async def list_complaint_for_concrete_announcement(
     pagination: Annotated[dict, Depends(parameters_for_pagination)],
@@ -47,7 +47,6 @@ async def list_complaint_for_concrete_announcement(
     announcement_id: int,
     session: AsyncSession = Depends(get_async_session),
     sort: str = None,
-    user: User = Depends(current_admin),
 ):
     query = (
         select(Complaint).

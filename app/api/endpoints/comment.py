@@ -9,10 +9,9 @@ from app.core.user import current_admin, current_user
 from app.models.announcement import Announcement, Comment
 from app.models.user import User
 from app.schemas.comment import CommentCreate, CommentDB
-from app.util.sort import sort_query
+from app.util.filter import filter_for_comment, parametr_filter_for_comment
 from app.util.pagination import parameters_for_pagination
-from app.util.filter import parametr_filter_for_comment, filter_for_comment
-
+from app.util.sort import sort_query
 
 router = APIRouter(tags=['Comment'])
 

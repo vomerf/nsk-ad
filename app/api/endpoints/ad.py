@@ -1,6 +1,7 @@
 from typing import Annotated
 
 from fastapi import APIRouter, Depends, HTTPException
+from fastapi.encoders import jsonable_encoder
 from sqlalchemy import select
 from sqlalchemy.exc import DBAPIError
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -13,7 +14,6 @@ from app.schemas.ad import AdCreate, AdDB, AdUpdate
 from app.util.filter import filter_for_ad, parametr_filter_for_ad
 from app.util.pagination import parameters_for_pagination
 from app.util.sort import sort_query
-from fastapi.encoders import jsonable_encoder
 
 router = APIRouter(tags=['Announcement'])
 
@@ -102,11 +102,10 @@ async def delete_ad(
 
 
 @router.put(
-    '/announcement/{announcement_id}/change-category/{new_category}',
+    '/announcement/{announcement_id}/change-category/',
     dependencies=[Depends(current_user)]
     )
 async def change_category(
-
     obj_in: AdUpdate,
     announcement_id: int,
     session: AsyncSession = Depends(get_async_session),
@@ -116,11 +115,6 @@ async def change_category(
         select(Announcement).where(Announcement.id == announcement_id)
     )
     ad = ad.scalars().first()
-    if not ad:
-        raise HTTPException(
-            status_code=404,
-            detail='Такого объявления не существует!'
-        )
     obj_data = jsonable_encoder(ad)
     update_data = obj_in.dict(exclude_unset=True)
     for field in obj_data:

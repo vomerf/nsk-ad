@@ -45,7 +45,7 @@ class UserManager(IntegerIDMixin, BaseUserManager[User, int]):
             raise InvalidPasswordException(
                 reason='Password cannot contain email'
             )
-    
+
     async def on_after_register(
         self, user: User,
         request: Optional[Request] = None

@@ -1,6 +1,6 @@
 from typing import Annotated
 
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, Path
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -21,11 +21,11 @@ router = APIRouter(tags=['Comment'])
     response_model=CommentDB,
 )
 async def create_comment(
-    announcement_id: int,
     comment: CommentCreate,
     session: AsyncSession = Depends(get_async_session),
-    user: User = Depends(current_user)
-):
+    user: User = Depends(current_user),
+    announcement_id: int = Path(gte=1),
+) -> Comment:
     obj_in_data = comment.dict()
     obj_in_data['user_id'] = user.id
     obj_in_data['announcement_id'] = announcement_id
@@ -38,16 +38,16 @@ async def create_comment(
 
 @router.get(
     '/announcement/{announcement_id}/list-comment',
-    response_model=list[CommentDB]
+    response_model=list[CommentDB],
+    dependencies=[Depends(current_user)]
 )
 async def list_comment_for_concrete_announcement(
     pagination: Annotated[dict, Depends(parameters_for_pagination)],
     filter: Annotated[dict, Depends(parametr_filter_for_comment)],
-    announcement_id: int,
     session: AsyncSession = Depends(get_async_session),
+    announcement_id: int = Path(gte=1),
     sort: str = None,
-    user: User = Depends(current_user),
-):
+) -> list[Comment]:
     query = (
         select(Comment).
         join(Announcement).
@@ -63,12 +63,15 @@ async def list_comment_for_concrete_announcement(
     return query
 
 
-@router.delete('/delete-comment/{comment_id}')
+@router.delete(
+    '/delete-comment/{comment_id}',
+    dependencies=[Depends(current_admin)],
+    response_model=CommentDB,
+)
 async def delete_comment(
-    comment_id: int,
+    comment_id: int = Path(gte=1),
     session: AsyncSession = Depends(get_async_session),
-    user: User = Depends(current_admin)
-):
+) -> Comment:
     ad = await session.execute(
         select(Comment).where(Comment.id == comment_id)
     )

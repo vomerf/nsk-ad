@@ -1,6 +1,6 @@
 from typing import Annotated
 
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, Path
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -21,8 +21,8 @@ router = APIRouter(tags=['Complaint'])
     response_model=ComplaintDB,
 )
 async def create_complaint(
-    announcement_id: int,
     comment: ComplaintCreate,
+    announcement_id: int = Path(gte=1),
     session: AsyncSession = Depends(get_async_session),
     user: User = Depends(current_user)
 ):
@@ -44,7 +44,7 @@ async def create_complaint(
 async def list_complaint_for_concrete_announcement(
     pagination: Annotated[dict, Depends(parameters_for_pagination)],
     filter: Annotated[dict, Depends(parametr_filter_for_complaint)],
-    announcement_id: int,
+    announcement_id: int = Path(gte=1),
     session: AsyncSession = Depends(get_async_session),
     sort: str = None,
 ):
@@ -63,11 +63,13 @@ async def list_complaint_for_concrete_announcement(
     return query
 
 
-@router.delete('/delete-complaint/{complaint_id}')
+@router.delete(
+    '/delete-complaint/{complaint_id}',
+    dependencies=[Depends(current_admin)]
+)
 async def delete_complaint(
-    complaint_id: int,
+    complaint_id: int = Path(gte=1),
     session: AsyncSession = Depends(get_async_session),
-    user: User = Depends(current_admin)
 ):
     complaint = await session.execute(
         select(Complaint).where(Complaint.id == complaint_id)

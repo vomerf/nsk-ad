@@ -29,8 +29,6 @@ router.include_router(
     tags=['users'],
     deprecated=True,
 )
-
-
 def delete_user(id: str):
     raise HTTPException(
         status_code=405,

@@ -116,12 +116,26 @@ async def change_category(
     obj_in: AdUpdate,
     announcement_id: int,
     session: AsyncSession = Depends(get_async_session),
+    user: User = Depends(current_user)
 ) -> Announcement:
     '''Перемещение объявления из одной группы в другую'''
     ad = await session.execute(
-        select(Announcement).where(Announcement.id == announcement_id)
+        select(Announcement).
+        where(
+            Announcement.id == announcement_id,
+            Announcement.user_id == user.id
+        )
     )
     ad = ad.scalars().first()
+    if ad is None:
+        raise HTTPException(
+            status_code=404,
+            detail=(
+                'Либо такого объявления не существует,'
+                'либо вы пытаетесь изменить категорию не у вашей записи.'
+                )
+            )
+
     obj_data = jsonable_encoder(ad)
     update_data = obj_in.dict(exclude_unset=True)
     for field in obj_data:
